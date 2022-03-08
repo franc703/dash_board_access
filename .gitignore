@@ -1,0 +1,12 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+
+
+# avoid non-necessary folders
+docs/
+figs/
+geo_data/
+output_data/
+raw_data/
