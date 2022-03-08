@@ -1,0 +1,232 @@
+---
+title: "Access to Childcare in Minnesota"
+output: 
+    flexdashboard::flex_dashboard:
+        theme: flatly
+        social: menu
+        orientation: columns
+        vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(lubridate)
+library(dplyr)
+library(ggplot2)
+library(ggstance)
+library(ggalt)
+fatalshootings <- read.csv("./data-police-shootings/fatal-police-shootings-data.csv",
+                           stringsAsFactors = FALSE)
+fatalshootings$date <- ymd(fatalshootings$date)
+fatalshootings[,c(4:5,7:8,9:14)] <- lapply(fatalshootings[,c(4:5,7:8,9:14)], 
+                                           as.factor)
+levels(fatalshootings$gender) <- c("Female", "Male")
+levels(fatalshootings$race) <- c("Unknown", "Asian", "Black", "Hispanic",
+                                 "Unknown", "Other", "White")
+fatalshootings$race <- factor(fatalshootings$race,
+                              levels(fatalshootings$race)[c(5,2,1,4,3,6)])
+levels(fatalshootings$flee) <- c("Unknown", "Car", "Foot", "Not fleeing", "Other")
+fatalshootings$flee <- factor(fatalshootings$flee,
+                              levels(fatalshootings$flee)[c(1,5,3,2,4)])
+levels(fatalshootings$manner_of_death) <- c("Beaten", "Shot", "Shot/Tasered")
+fatalshootings$manner_of_death <- factor(fatalshootings$manner_of_death,
+                                         levels(fatalshootings$manner_of_death)[c(1,3,2)])
+```
+
+Sidebar {.sidebar}
+=====================================
+
+The Washington Post is compiling a database of every fatal shooting in the United States by a police officer in the line of duty since January 1, 2015 and has made that database [publicly available on GitHub](https://github.com/washingtonpost/data-police-shootings). Their own visualizations and reporting are [online here](https://www.washingtonpost.com/graphics/national/police-shootings-2016/), and this dashboard presents the same data. The Washington Post's database does not include deaths of people in police custody, fatal shootings by off-duty officers, or non-shooting deaths.
+
+This dashboard presents these fatal police shootings unadjusted for population demographics. For example, black individuals make up about 13% of the U.S. population but about 25% of these fatal police shootings. Hispanic individuals are represented at about their U.S. population level, and Asian and white people are underrepresented compared to their U.S. population levels. 
+
+
+Demographics {data-icon="fa-users"} 
+=====================================  
+
+Row
+-------------------------------------
+   
+### Race/Ethnicity
+
+```{r}
+ggplot(data = fatalshootings, aes(y = race)) + 
+        geom_barh(aes(fill = ..count..)) +
+        theme_minimal(base_size = 13) +
+        theme(legend.position = "none") +
+        scale_x_continuous(expand=c(0,0)) +
+        scale_fill_gradient(low = "royalblue3", high = "navyblue") +
+        labs(y = NULL, x = "Number of deaths")
+```   
+
+### Sex/Gender
+
+```{r}
+ggplot(data = fatalshootings, aes(y = gender)) + 
+        geom_barh(aes(fill = ..count..)) +
+        theme_minimal(base_size = 13) +
+        theme(legend.position = "none") +
+        scale_x_continuous(expand=c(0,0)) +
+        scale_fill_gradient(low = "royalblue3", high = "navyblue") +
+        labs(y = NULL, x = "Number of deaths")
+```
+
+
+Row
+-------------------------------------
+    
+### Age
+    
+```{r}
+ggplot(data = fatalshootings, aes(x = age)) + 
+        geom_histogram(aes(fill = ..count..), bins = 20) +
+        theme_minimal(base_size = 13) +
+        theme(legend.position = "none") +
+        scale_x_continuous(expand=c(0,0)) +
+        scale_fill_gradient(low = "royalblue3", high = "navyblue") +
+        labs(x = "Age at death", y = "Number of deaths")
+
+```
+    
+### Signs of Mental Illness
+
+```{r}
+ggplot(data = fatalshootings, aes(y = signs_of_mental_illness)) + 
+        geom_barh(aes(fill = ..count..)) +
+        theme_minimal(base_size = 13) +
+        theme(legend.position = "none") +
+        scale_x_continuous(expand=c(0,0)) +
+        scale_fill_gradient(low = "royalblue3", high = "navyblue") +
+        labs(y = NULL, x = "Number of deaths")
+```
+
+
+Time {data-icon="fa-calendar"} 
+=====================================  
+
+Column {.tabset}
+-------------------------------------
+
+### Overall
+
+```{r, fig.height=7, fig.width=9}
+ggplot(data = fatalshootings, aes(x = date)) + 
+        geom_histogram(aes(fill = ..count..), bins = 25) +
+        theme_minimal() +
+        theme(legend.position = "none") +
+        scale_fill_gradient(low = "royalblue3", high = "navyblue") +
+        labs(x = NULL, y = "Number of deaths")
+```
+
+### Month
+
+```{r, fig.height=7, fig.width=9}
+ggplot(data = fatalshootings, aes(x = month(date, label = TRUE))) + 
+        geom_bar(aes(fill = ..count..)) +
+        theme_minimal() +
+        theme(legend.position = "none") +
+        scale_y_continuous(expand=c(0,0)) +
+        scale_fill_gradient(low = "royalblue3", high = "navyblue") +
+        labs(x = NULL, y = "Number of deaths")
+```
+
+
+### Weekday
+
+```{r, fig.height=7, fig.width=9}
+ggplot(data = fatalshootings, aes(x = wday(date, label = TRUE))) + 
+        geom_bar(aes(fill = ..count..)) +
+        theme_minimal() +
+        theme(legend.position = "none") +
+        scale_y_continuous(expand=c(0,0)) +
+        scale_fill_gradient(low = "royalblue3", high = "navyblue") +
+        labs(x = NULL, y = "Number of deaths")
+```
+
+
+Locations {data-icon="fa-map-marker"}
+=====================================     
+   
+
+### Top 15 States for Fatal Police Shootings
+
+```{r, fig.height=9, fig.width=9}
+stateinfo <- fatalshootings %>% group_by(state) %>% summarise(n = n()) %>% 
+        arrange(desc(n)) %>% top_n(15) %>% 
+        mutate(state = factor(state, levels = rev(unique(state))))
+ggplot(stateinfo, aes(x = n, y = state)) +
+        geom_barh(stat="identity", aes(fill = n)) +
+        geom_stateface(aes(y=state, x=7, label=as.character(state)), colour="white", size=8) +
+        geom_text(aes(x = 17, y = state, label=as.character(state)), color="white", size=5) +
+        labs(y = NULL, x = "Number of deaths") +
+        scale_fill_gradient(low = "royalblue3", high = "navyblue") +
+        theme_minimal(base_size = 13) +
+        theme(axis.text.y=element_blank()) +
+        theme(legend.position = "none") +
+        scale_x_continuous(expand=c(0,0))
+```
+
+Circumstances of Death {data-icon="fa-question"} 
+=====================================  
+
+Column
+-------------------------------------
+   
+### Was the Person Killed Armed? (top 10 reported categories)
+
+```{r}
+armedinfo <- fatalshootings %>% group_by(armed) %>% summarise(n = n()) %>% 
+        arrange(desc(n)) %>% top_n(10) %>% 
+        mutate(armed = factor(armed, levels = rev(unique(armed))))
+
+ggplot(data = armedinfo, aes(x = n, y = armed)) + 
+        geom_barh(stat="identity", aes(fill = n)) +
+        theme_minimal(base_size = 13) +
+        theme(legend.position = "none") +
+        scale_x_continuous(expand=c(0,0)) +
+        scale_fill_gradient(low = "royalblue3", high = "navyblue") +
+        labs(y = NULL, x = "Number of deaths")
+```   
+
+### Was the Police Officer Wearing a Body Camera?
+    
+```{r}
+ggplot(data = fatalshootings, aes(y = body_camera)) + 
+        geom_barh(aes(fill = ..count..)) +
+        theme_minimal(base_size = 13) +
+        theme(legend.position = "none") +
+        scale_x_continuous(expand=c(0,0)) +
+        scale_fill_gradient(low = "royalblue3", high = "navyblue") +
+        labs(y = NULL, x = "Number of deaths")
+
+```
+
+
+Column
+-------------------------------------
+    
+### Was the Person Killed Fleeing?
+
+```{r}
+ggplot(data = fatalshootings, aes(y = flee)) + 
+        geom_barh(aes(fill = ..count..)) +
+        theme_minimal(base_size = 13) +
+        theme(legend.position = "none") +
+        scale_x_continuous(expand=c(0,0)) +
+        scale_fill_gradient(low = "royalblue3", high = "navyblue") +
+        labs(y = NULL, x = "Number of deaths")
+```
+
+    
+### How Was the Person Killed?
+
+```{r}
+ggplot(data = fatalshootings, aes(y = manner_of_death)) + 
+        geom_barh(aes(fill = ..count..)) +
+        theme_minimal(base_size = 13) +
+        theme(legend.position = "none") +
+        scale_x_continuous(expand=c(0,0)) +
+        scale_fill_gradient(low = "royalblue3", high = "navyblue") +
+        labs(y = NULL, x = "Number of deaths")
+```
+
